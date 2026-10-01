@@ -8,6 +8,7 @@ from game.renderer import WIDTH, HEIGHT
 
 NUM_COINS = 6
 STARTING_LIVES = 3
+ROUND_DURATION = 30
 
 COIN_TYPES = [
     ("bronze", 1, (205, 127, 50)),
@@ -20,7 +21,11 @@ class GameEngine:
     def __init__(self):
         self.start_x = WIDTH / 2
         self.start_y = HEIGHT / 2
+        self.round_duration = ROUND_DURATION
 
+        self.reset_round()
+
+    def reset_round(self):
         self.player = Player(
             x=self.start_x,
             y=self.start_y
@@ -35,6 +40,10 @@ class GameEngine:
             self._random_coin(index)
             for index in range(NUM_COINS)
         ]
+
+        self.start_time = pygame.time.get_ticks()
+        self.remaining_time = self.round_duration
+        self.game_over = False
 
     def _create_obstacles(self):
         return [
@@ -90,6 +99,11 @@ class GameEngine:
         )
 
     def handle_input(self, keys_pressed):
+        if self.game_over:
+            if keys_pressed[pygame.K_r]:
+                self.reset_round()
+            return
+
         dx = dy = 0
 
         if keys_pressed[pygame.K_UP]:
@@ -112,6 +126,18 @@ class GameEngine:
         )
 
     def update(self):
+        if self.game_over:
+            return
+
+        elapsed_seconds = (
+            pygame.time.get_ticks() - self.start_time
+        ) / 1000
+
+        self.remaining_time = max(
+            0,
+            self.round_duration - elapsed_seconds
+        )
+
         collected = check_collection(
             self.player,
             self.coins
@@ -136,6 +162,12 @@ class GameEngine:
 
                 break
 
+        if (
+            self.remaining_time <= 0
+            or self.lives <= 0
+        ):
+            self.game_over = True
+
     def draw(self, surface, font):
         from game import renderer
 
@@ -159,3 +191,17 @@ class GameEngine:
             f"Lives: {self.lives}",
             (10, 40)
         )
+
+        renderer.draw_text(
+            surface,
+            font,
+            f"Time: {int(self.remaining_time)}",
+            (10, 70)
+        )
+
+        if self.game_over:
+            renderer.draw_game_over(
+                surface,
+                font,
+                self.score
+            )
