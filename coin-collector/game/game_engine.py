@@ -7,6 +7,7 @@ from game.collection import check_collection
 from game.renderer import WIDTH, HEIGHT
 
 NUM_COINS = 6
+STARTING_LIVES = 3
 
 COIN_TYPES = [
     ("bronze", 1, (205, 127, 50)),
@@ -17,29 +18,71 @@ COIN_TYPES = [
 
 class GameEngine:
     def __init__(self):
+        self.start_x = WIDTH / 2
+        self.start_y = HEIGHT / 2
+
         self.player = Player(
-            x=WIDTH / 2,
-            y=HEIGHT / 2
+            x=self.start_x,
+            y=self.start_y
         )
+
+        self.score = 0
+        self.lives = STARTING_LIVES
+
+        self.obstacles = self._create_obstacles()
 
         self.coins = [
             self._random_coin(index)
             for index in range(NUM_COINS)
         ]
 
-        self.score = 0
+    def _create_obstacles(self):
+        return [
+            pygame.Rect(150, 120, 120, 25),
+            pygame.Rect(430, 100, 120, 25),
+            pygame.Rect(250, 280, 200, 25),
+            pygame.Rect(100, 390, 140, 25),
+        ]
 
     def _random_coin(self, index):
-        x = random.randint(30, WIDTH - 30)
-        y = random.randint(30, HEIGHT - 30)
-
         coin_type, value, color = COIN_TYPES[
             index % len(COIN_TYPES)
         ]
 
+        for _ in range(100):
+            x = random.randint(30, WIDTH - 30)
+            y = random.randint(30, HEIGHT - 30)
+
+            coin_rect = pygame.Rect(
+                int(x - 12),
+                int(y - 12),
+                24,
+                24
+            )
+
+            if any(
+                coin_rect.colliderect(obstacle)
+                for obstacle in self.obstacles
+            ):
+                continue
+
+            if coin_rect.colliderect(
+                self.player.get_rect()
+            ):
+                continue
+
+            return Coin(
+                x=x,
+                y=y,
+                radius=12,
+                value=value,
+                color=color,
+                coin_type=coin_type
+            )
+
         return Coin(
-            x=x,
-            y=y,
+            x=50,
+            y=50,
             radius=12,
             value=value,
             color=color,
@@ -82,13 +125,25 @@ class GameEngine:
             if coin not in collected
         ]
 
+        player_rect = self.player.get_rect()
+
+        for obstacle in self.obstacles:
+            if player_rect.colliderect(obstacle):
+                self.lives -= 1
+
+                self.player.x = self.start_x
+                self.player.y = self.start_y
+
+                break
+
     def draw(self, surface, font):
         from game import renderer
 
         renderer.draw_scene(
             surface,
             self.player,
-            self.coins
+            self.coins,
+            self.obstacles
         )
 
         renderer.draw_text(
@@ -96,4 +151,11 @@ class GameEngine:
             font,
             f"Score: {self.score}",
             (10, 10)
+        )
+
+        renderer.draw_text(
+            surface,
+            font,
+            f"Lives: {self.lives}",
+            (10, 40)
         )
