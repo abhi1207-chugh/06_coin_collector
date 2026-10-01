@@ -7,7 +7,12 @@ from game.collection import check_collection
 from game.renderer import WIDTH, HEIGHT
 
 NUM_COINS = 6
-COIN_VALUE = 1
+
+COIN_TYPES = [
+    ("bronze", 1, (205, 127, 50)),
+    ("silver", 3, (192, 192, 192)),
+    ("gold", 5, (255, 215, 0)),
+]
 
 
 class GameEngine:
@@ -18,21 +23,27 @@ class GameEngine:
         )
 
         self.coins = [
-            self._random_coin()
-            for _ in range(NUM_COINS)
+            self._random_coin(index)
+            for index in range(NUM_COINS)
         ]
 
         self.score = 0
 
-    def _random_coin(self):
+    def _random_coin(self, index):
         x = random.randint(30, WIDTH - 30)
         y = random.randint(30, HEIGHT - 30)
+
+        coin_type, value, color = COIN_TYPES[
+            index % len(COIN_TYPES)
+        ]
 
         return Coin(
             x=x,
             y=y,
             radius=12,
-            value=COIN_VALUE
+            value=value,
+            color=color,
+            coin_type=coin_type
         )
 
     def handle_input(self, keys_pressed):
@@ -66,8 +77,6 @@ class GameEngine:
         for coin in collected:
             self.score += coin.value
 
-        # Remove collected coins so they can only be
-        # collected once.
         self.coins = [
             coin for coin in self.coins
             if coin not in collected
